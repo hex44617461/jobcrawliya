@@ -9,3 +9,6 @@ link: "https://www.jobkorea.co.kr/Recruit/GI_Read/49541733?Oem_Code=C1&logpath=1
 - **회사명**: 한화에어로스페이스㈜
 - **경력 요건**: 경력
 - **공고 링크**: [바로가기](https://www.jobkorea.co.kr/Recruit/GI_Read/49541733?Oem_Code=C1&logpath=1&listno=9&sc=630)
+
+## 📄 공고 본문 캡처본
+![공고 스크린샷](../img/한화에어로스페이스__AI_인력_상시_경력_채용_AI_기반_기술자료_개발.png)

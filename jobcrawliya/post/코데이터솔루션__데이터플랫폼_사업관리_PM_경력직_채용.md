@@ -9,3 +9,8 @@ link: "https://www.jobkorea.co.kr/Recruit/GI_Read/49542817?Oem_Code=C1&logpath=1
 - **회사명**: 코데이터솔루션㈜
 - **경력 요건**: 경력3년↑
 - **공고 링크**: [바로가기](https://www.jobkorea.co.kr/Recruit/GI_Read/49542817?Oem_Code=C1&logpath=1&listno=3&sc=630)
+
+---
+
+## 📸 채용 공고 본문 캡처
+![채용 공고 본문](../img/코데이터솔루션__데이터플랫폼_사업관리_PM_경력직_채용.png)

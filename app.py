@@ -7,7 +7,7 @@ from playwright.async_api import async_playwright
 
 async def scrape_jobkorea_full():
     """잡코리아 채용 공고를 순회하며, 기존 마크다운 YAML에 저장된 
-    공고 링크와 중복되지 않는 신규 공고만 스크린샷과 마크다운으로 저장합니다."""
+    공고 링크와 중복되지 않는 신규 공고만 찾아 본문 영역만 가로 잘림 없이 깔끔하게 캡처하여 저장합니다."""
     
     # ==========================================
     # 1. [설정 및 재료 모음] 모든 변수와 기본 설정
@@ -16,7 +16,7 @@ async def scrape_jobkorea_full():
     DUTY_CODE = "1000236"  # 데이터엔지니어링 직무 코드
     
     page_num_min = 1
-    page_num_max = 1  # 최대 30페이지까지 순회 (테스트 시 2 등으로 조정 가능)
+    page_num_max = 1  # 💡 1페이지만 테스트하려면 1, 전체 수집 시 30으로 변경!
 
     DIR_BASE = "jobcrawliya"
     DIR_POST = os.path.join(DIR_BASE, "post")
@@ -55,7 +55,7 @@ async def scrape_jobkorea_full():
         # 백그라운드(화면 없음)에서 크롬 엔진 실행
         browser = await p.chromium.launch(headless=True) 
         
-        # 차단 유발 문자(...)가 없는 완벽한 대한민국 윈도우 크롬 신분증 세팅
+        # 차단 유발 문자가 없는 완벽한 대한민국 윈도우 크롬 신분증 세팅
         context = await browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
             viewport={"width": 1440, "height": 1024},
@@ -106,7 +106,6 @@ async def scrape_jobkorea_full():
                         job_link = raw_link if raw_link.startswith("http") else URL_BASE + raw_link
                         
                         # 🌟 [링크 기반 중복 검사] 
-                        # 방금 추출한 job_link가 기존 YAML 링크 주머니에 있다면 완벽하게 패스!
                         if job_link.strip() in visited_links:
                             print(f"  ⏭️  [링크 중복 패스] 이미 파일 내에 존재하는 링크입니다: {corp} - {title}")
                             continue 
@@ -121,15 +120,51 @@ async def scrape_jobkorea_full():
                         try:
                             await detail_page.goto(job_link, wait_until="domcontentloaded", timeout=10000)
                             
-                            # ⏰ 선비 모드 딜레이 1: 상세 페이지가 온전히 그려지고 글 읽는 척 10초 대기
+                            # ⏰ 선비 모드 딜레이 1: 상세 페이지가 온전히 그려지길 10초 대기
                             await asyncio.sleep(10) 
                             
-                            # ① 스크린샷 이미지 저장 (.png)
-                            img_path = os.path.join(DIR_IMG, f"{safe_filename}.png")
-                            await detail_page.screenshot(path=img_path, full_page=True)
+                            # --------------------------------------------------
+                            # ① [CSS 변조 및 풀 와이드 캡처] 가로 잘림 원천 차단
+                            # --------------------------------------------------
+                            img_name = f"{safe_filename}.png"
+                            img_path = os.path.join(DIR_IMG, img_name)
                             
-                            # ② 마크다운 파일 저장 (.md) - 질문자님의 YAML 서식에 맞춰 저장
+                            python_selector = "div.\\[grid-area\\:content\\]"
+                            content_element = await detail_page.query_selector(python_selector)
+                            
+                            if content_element:
+                                # 자바스크립트를 주입해 본문 영역의 마진과 너비 제한을 풀어 잘림 현상을 막습니다.
+                                await detail_page.evaluate("""
+                                    const el = document.querySelector('div.\\\\[grid-area\\\\:content\\\\]');
+                                    if (el) {
+                                        el.style.width = '100%';
+                                        el.style.maxWidth = '100%';
+                                        el.style.marginLeft = '0';
+                                        el.style.marginRight = '0';
+                                        el.style.padding = '20px';
+                                    }
+                                    const aside = document.querySelector('aside, .\\\\[grid-area\\\\:aside\\\\]');
+                                    if (aside) aside.style.display = 'none';
+                                """)
+                                
+                                # 캡처용 뷰포트 조절 후 전체 화면으로 촬영
+                                await detail_page.set_viewport_size({"width": 1000, "height": 1024})
+                                await detail_page.screenshot(path=img_path, full_page=True)
+                                
+                                # 브라우저 크기 원상 복구
+                                await detail_page.set_viewport_size({"width": 1440, "height": 1024})
+                                print(f"    🎯 [변조 캡처 완료] {safe_filename} 잘림 없이 본문 캡처 성공!")
+                            else:
+                                # 예외 대비용 백업 (전체 화면)
+                                await detail_page.screenshot(path=img_path, full_page=True)
+                                print(f"    ⚠️ 본문 구역을 찾지 못해 기본 전체 화면으로 대체 캡처했습니다.")
+                            
+                            # --------------------------------------------------
+                            # ② [마크다운 파일 저장] 이미지 렌더링 코드 완벽 복구!!
+                            # --------------------------------------------------
                             post_path = os.path.join(DIR_POST, f"{safe_filename}.md")
+                            
+                            # post 폴더 기준으로 한 단계 올라가서 img 폴더를 바라보는 상대경로(../img/) 세팅
                             markdown_content = f"""---
 title: "{title}"
 company: "{corp}"
@@ -141,11 +176,14 @@ link: "{job_link}"
 - **회사명**: {corp}
 - **경력 요건**: {exp}
 - **공고 링크**: [바로가기]({job_link})
+
+## 📄 공고 본문 캡처본
+![공고 스크린샷](../img/{img_name})
 """
                             with open(post_path, "w", encoding="utf-8") as f:
                                 f.write(markdown_content)
                                 
-                            print(f"    💾 저장 완료: {safe_filename} (.png / .md)")
+                            print(f"    💾 저장 완료: {safe_filename} (.png / .md 연동 완료)")
                             
                             # 실시간 중복 방지 주머니 업데이트
                             visited_links.add(job_link.strip())
@@ -155,13 +193,13 @@ link: "{job_link}"
                         finally:
                             await detail_page.close()
                             
-                        # ⏰ 선비 모드 딜레이 2: 공고 하나 저장하고 다음 공고 클릭하기 전 10~15초 랜덤 대기
+                        # ⏰ 선비 모드 딜레이 2: 공고 간 10~15초 랜덤 대기
                         await asyncio.sleep(random.uniform(10, 15))
                         
                 finally:
                     await search_page.close()
 
-                # ⏰ 선비 모드 딜레이 3: 한 페이지 다 훑고 다음 리스트 페이지 넘어가기 전 5~12초 랜덤 대기
+                # ⏰ 선비 모드 딜레이 3: 페이지 전환 간 5~12초 랜덤 대기
                 print(f"=== 다음 페이지로 넘어가기 전 대기 중... ===")
                 await asyncio.sleep(random.uniform(5, 12))
                 
@@ -172,8 +210,7 @@ link: "{job_link}"
             print("\n🏁 [성공] 모든 페이지의 공고 아카이빙 순회가 완료되었습니다!")
 
 # ==========================================
-# 6. [진짜 실행 구역] 주피터/코랩 환경 전용 시동 코드
+# 6. [진짜 실행 구역] 로컬 터미널(.py) 전용 시동 코드
 # ==========================================
 if __name__ == "__main__":
-    # asyncio 라이브러리를 사용해 비동기 올인원 함수 실행
     asyncio.run(scrape_jobkorea_full())
