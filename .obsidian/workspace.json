@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "jobcrawliya/post/한화에어로스페이스__AI_인력_상시_경력_채용_수리부속_데이터_아키텍트.md",
+                "file": "jobcrawliya/post/화이트스캔__데이터_엔지니어_인프라_구축_및_관리.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "한화에어로스페이스__AI_인력_상시_경력_채용_수리부속_데이터_아키텍트"
+              "title": "화이트스캔__데이터_엔지니어_인프라_구축_및_관리"
             }
           }
         ]
@@ -94,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "jobcrawliya/post/한화에어로스페이스__AI_인력_상시_경력_채용_수리부속_데이터_아키텍트.md",
+                "file": "jobcrawliya/post/화이트스캔__데이터_엔지니어_인프라_구축_및_관리.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "한화에어로스페이스__AI_인력_상시_경력_채용_수리부속_데이터_아키텍트 의 백링크"
+              "title": "화이트스캔__데이터_엔지니어_인프라_구축_및_관리 의 백링크"
             }
           },
           {
@@ -113,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "jobcrawliya/post/한화에어로스페이스__AI_인력_상시_경력_채용_수리부속_데이터_아키텍트.md",
+                "file": "jobcrawliya/post/화이트스캔__데이터_엔지니어_인프라_구축_및_관리.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "한화에어로스페이스__AI_인력_상시_경력_채용_수리부속_데이터_아키텍트 의 나가는 링크"
+              "title": "화이트스캔__데이터_엔지니어_인프라_구축_및_관리 의 나가는 링크"
             }
           },
           {
@@ -156,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "jobcrawliya/post/한화에어로스페이스__AI_인력_상시_경력_채용_수리부속_데이터_아키텍트.md",
+                "file": "jobcrawliya/post/화이트스캔__데이터_엔지니어_인프라_구축_및_관리.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "한화에어로스페이스__AI_인력_상시_경력_채용_수리부속_데이터_아키텍트 의 개요"
+              "title": "화이트스캔__데이터_엔지니어_인프라_구축_및_관리 의 개요"
             }
           }
         ]
@@ -185,21 +185,32 @@
   },
   "active": "a5ee299534f2c137",
   "lastOpenFiles": [
-    "jobcrawliya/post/한화에어로스페이스__AI_인력_상시_경력_채용_AI_기반_기술자료_개발.md",
+    "jobcrawliya/post/주_케이씨엠에스_kcms__서대문_농협손보_EDW_운영_c10.md",
+    "jobcrawliya/post/화이트스캔__데이터_엔지니어_인프라_구축_및_관리.md",
+    "jobcrawliya/img/화이트스캔__데이터_엔지니어_인프라_구축_및_관리.png",
+    "jobcrawliya/post/케이앤웍스__경력_RPA_시스템_구축_및_운영_개발자_A.I접목_과제_개발경험자_우대.md",
+    "jobcrawliya/img/주_케이씨엠에스_kcms__서대문_농협손보_EDW_운영_c10.png",
+    "jobcrawliya/post/한화에어로스페이스__AI_인력_상시_경력_채용_생성형_AI_서비스_기획_개발.md",
+    "jobcrawliya/img/케이앤웍스__경력_RPA_시스템_구축_및_운영_개발자_A.I접목_과제_개발경험자_우대.png",
+    "jobcrawliya/post/한화에어로스페이스__AI_인력_상시_경력_채용_PLM_AI_솔루션_아키텍트.md",
+    "jobcrawliya/img/한화에어로스페이스__AI_인력_상시_경력_채용_생성형_AI_서비스_기획_개발.png",
+    "jobcrawliya/post/한화에어로스페이스__AI_인력_상시_경력_채용_군_임무계획_동적_의사결정_개발.md",
+    "jobcrawliya/img/한화에어로스페이스__AI_인력_상시_경력_채용_PLM_AI_솔루션_아키텍트.png",
+    "jobcrawliya/post/한화에어로스페이스__AI_인력_상시_경력_채용_Multi-sensor_Fusion_항법_개발.md",
+    "jobcrawliya/img/한화에어로스페이스__AI_인력_상시_경력_채용_군_임무계획_동적_의사결정_개발.png",
+    "jobcrawliya/post/한화에어로스페이스__AI_인력_상시_경력_채용_인지_개발_SA_ATR_ATT.md",
+    "jobcrawliya/img/한화에어로스페이스__AI_인력_상시_경력_채용_Multi-sensor_Fusion_항법_개발.png",
+    "jobcrawliya/post/한화에어로스페이스__AI_인력_상시_경력_채용_선박용_AI_솔루션_개발_데이터_아키텍트.md",
+    "jobcrawliya/img/한화에어로스페이스__AI_인력_상시_경력_채용_인지_개발_SA_ATR_ATT.png",
+    "jobcrawliya/post/한화에어로스페이스__AI_인력_상시_경력_채용_고장_예측_모델_개발.md",
+    "jobcrawliya/img/한화에어로스페이스__AI_인력_상시_경력_채용_선박용_AI_솔루션_개발_데이터_아키텍트.png",
     "jobcrawliya/post/한화에어로스페이스__AI_인력_상시_경력_채용_수리부속_데이터_아키텍트.md",
-    "jobcrawliya/img/한화에어로스페이스__AI_인력_상시_경력_채용_수리부속_데이터_아키텍트.png",
-    "jobcrawliya/img/한화에어로스페이스__AI_인력_상시_경력_채용_AI_기반_기술자료_개발.png",
+    "jobcrawliya/img/한화에어로스페이스__AI_인력_상시_경력_채용_고장_예측_모델_개발.png",
+    "jobcrawliya/post/한화에어로스페이스__AI_인력_상시_경력_채용_AI_기반_기술자료_개발.md",
+    "jobcrawliya/post/스몰티켓_함께_성공할_Video_ML_Engineer_VML_엔지니어_채용합니다.md",
     "jobcrawliya/post/마이데이터_Airflow_BigQuery_데이터_엔지니어_모집.md",
     "jobcrawliya/post/에이아이매틱스__에이아이매틱스_로보틱스_미들웨어_엔지니어_채용.md",
     "jobcrawliya/post/케이티샛_kt_sat_2026년_하반기_경력_신입_공개채용.md",
-    "jobcrawliya/post/스몰티켓_함께_성공할_Video_ML_Engineer_VML_엔지니어_채용합니다.md",
-    "jobcrawliya/img/케이티샛_kt_sat_2026년_하반기_경력_신입_공개채용.png",
-    "jobcrawliya/img/스몰티켓_함께_성공할_Video_ML_Engineer_VML_엔지니어_채용합니다.png",
-    "jobcrawliya/img/컴퓨터수리__신입_서울_전_지역_컴퓨터수리_기술_배울_신입_수리기사_채용.png",
-    "jobcrawliya/img/유큐브__세종_유지보수사업_데이터_품질관리_표준화.png",
-    "jobcrawliya/img/에이아이매틱스__에이아이매틱스_로보틱스_미들웨어_엔지니어_채용.png",
-    "jobcrawliya/img/베스핀글로벌__Google_Cloud_Platform_Engineer_영입.png",
-    "jobcrawliya/img/마이데이터_Airflow_BigQuery_데이터_엔지니어_모집.png",
     "jobcrawliya/post/베스핀글로벌__Google_Cloud_Platform_Engineer_영입.md",
     "jobcrawliya/post/코데이터솔루션__데이터플랫폼_사업관리_PM_경력직_채용.md",
     "jobcrawliya/post/컴퓨터수리__신입_서울_전_지역_컴퓨터수리_기술_배울_신입_수리기사_채용.md",

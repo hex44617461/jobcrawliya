@@ -7,7 +7,7 @@ from playwright.async_api import async_playwright
 
 async def scrape_jobkorea_full():
     """잡코리아 채용 공고를 순회하며, 기존 마크다운 YAML에 저장된 
-    공고 링크와 중복되지 않는 신규 공고만 찾아 본문 영역만 가로 잘림 없이 깔끔하게 캡처하여 저장합니다."""
+    공고 링크와 중복되지 않는 신규 공고만 찾아 본문 영역만 사방 잘림/찌꺼기 없이 칼같이 캡처하여 저장합니다."""
     
     # ==========================================
     # 1. [설정 및 재료 모음] 모든 변수와 기본 설정
@@ -124,7 +124,7 @@ async def scrape_jobkorea_full():
                             await asyncio.sleep(10) 
                             
                             # --------------------------------------------------
-                            # ① [CSS 변조 및 풀 와이드 캡처] 가로 잘림 원천 차단
+                            # ① [CSS 변조 후 정밀 크롭 캡처] 밑바닥 찌꺼기 완벽 차단!
                             # --------------------------------------------------
                             img_name = f"{safe_filename}.png"
                             img_path = os.path.join(DIR_IMG, img_name)
@@ -133,7 +133,7 @@ async def scrape_jobkorea_full():
                             content_element = await detail_page.query_selector(python_selector)
                             
                             if content_element:
-                                # 자바스크립트를 주입해 본문 영역의 마진과 너비 제한을 풀어 잘림 현상을 막습니다.
+                                # 자바스크립트를 주입해 본문 영역의 가로 제한과 마진을 풀어 넓혀놓습니다.
                                 await detail_page.evaluate("""
                                     const el = document.querySelector('div.\\\\[grid-area\\\\:content\\\\]');
                                     if (el) {
@@ -147,24 +147,24 @@ async def scrape_jobkorea_full():
                                     if (aside) aside.style.display = 'none';
                                 """)
                                 
-                                # 캡처용 뷰포트 조절 후 전체 화면으로 촬영
+                                # 가로 뷰포트를 살짝 여유 있게 세팅한 후
                                 await detail_page.set_viewport_size({"width": 1000, "height": 1024})
-                                await detail_page.screenshot(path=img_path, full_page=True)
+                                
+                                # 🌟 [핵심 변경] full_page=True 대신 content_element 자체를 찍어 본문 끝에서 칼같이 커팅!
+                                await content_element.screenshot(path=img_path)
                                 
                                 # 브라우저 크기 원상 복구
                                 await detail_page.set_viewport_size({"width": 1440, "height": 1024})
-                                print(f"    🎯 [변조 캡처 완료] {safe_filename} 잘림 없이 본문 캡처 성공!")
+                                print(f"    🎯 [정밀 커팅 완수] {safe_filename} 하단 찌꺼기 없이 본문만 아웃풋 성공!")
                             else:
                                 # 예외 대비용 백업 (전체 화면)
                                 await detail_page.screenshot(path=img_path, full_page=True)
                                 print(f"    ⚠️ 본문 구역을 찾지 못해 기본 전체 화면으로 대체 캡처했습니다.")
                             
                             # --------------------------------------------------
-                            # ② [마크다운 파일 저장] 이미지 렌더링 코드 완벽 복구!!
+                            # ② [마크다운 파일 저장] 이미지 렌더링 주소 포함
                             # --------------------------------------------------
                             post_path = os.path.join(DIR_POST, f"{safe_filename}.md")
-                            
-                            # post 폴더 기준으로 한 단계 올라가서 img 폴더를 바라보는 상대경로(../img/) 세팅
                             markdown_content = f"""---
 title: "{title}"
 company: "{corp}"
