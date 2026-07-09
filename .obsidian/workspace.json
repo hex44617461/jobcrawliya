@@ -11,10 +11,14 @@
             "id": "2a03f1efd3a97a14",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
+              "type": "markdown",
+              "state": {
+                "file": "data/scraped/posts/민컴퍼니_이천_파이썬_고급_데이터엔지니어.md",
+                "mode": "source",
+                "source": false
+              },
               "icon": "lucide-file",
-              "title": "새 탭"
+              "title": "민컴퍼니_이천_파이썬_고급_데이터엔지니어"
             }
           }
         ]
@@ -181,6 +185,10 @@
   },
   "active": "2a03f1efd3a97a14",
   "lastOpenFiles": [
+    "data/scraped/posts/한화에어로스페이스__AI_인력_상시_경력_채용_생성형_AI_서비스_기획_개발.md",
+    "data/scraped/posts/민컴퍼니_이천_파이썬_고급_데이터엔지니어.md",
+    "data/scraped/posts/컴퓨터수리__신입_서울_전_지역_컴퓨터수리_기술_배울_신입_수리기사_채용.md",
+    "data/scraped/posts/디와이즈__중급_Java_보험사_재무업무_경험자_구인.md",
     "jobcrawliya/post/화이트스캔__데이터_엔지니어_인프라_구축_및_관리.md",
     "jobcrawliya/post/주_케이씨엠에스_kcms__서대문_농협손보_EDW_운영_c10.md",
     "jobcrawliya/img/화이트스캔__데이터_엔지니어_인프라_구축_및_관리.png",

@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/playwright/python:1.60.0
+FROM mcr.microsoft.com/playwright/python:v1.60.0-noble
 
 WORKDIR /usr/src/app
 
@@ -14,4 +14,4 @@ RUN playwright install --with-deps || true
 
 ENV PYTHONUNBUFFERED=1
 
-CMD ["python", "app.py"]
+CMD ["python", "-m", "crawling"]
