@@ -1,27 +1,40 @@
 services:
   # 자동 크롤링이 필요할 때만: docker compose --profile auto-crawl up --build
   crawler:
+    # 기본 실행에서는 올라오지 않고 auto-crawl 프로필을 지정했을 때만 실행됩니다.
     profiles: ["auto-crawl"]
+    # 별도 크롤러 이미지는 Dockerfile.crawler를 사용해 빌드합니다.
     build:
       context: .
       dockerfile: Dockerfile.crawler
+    # 컨테이너 이름을 고정해 로그와 상태 확인을 쉽게 합니다.
     container_name: jobcrawliya_crawler
+    # 수집 결과는 호스트의 ./data와 공유해 컨테이너 재생성 후에도 남깁니다.
     volumes:
       - ./data:/usr/src/app/data
+    # Python 로그가 지연 없이 Docker 로그에 표시되도록 합니다.
     environment:
       - PYTHONUNBUFFERED=1
+    # 예기치 않은 종료 시 Docker가 다시 시작하도록 합니다.
     restart: unless-stopped
+    # Chromium이 페이지를 렌더링할 때 공유 메모리 부족이 덜 나도록 합니다.
     shm_size: "1gb"
 
   streamlit:
+    # 로컬 대시보드와 수집 버튼을 제공하는 기본 서비스입니다.
     build:
       context: .
       dockerfile: Dockerfile.streamlit
+    # 컨테이너 이름을 고정해 브라우저/로그 확인을 쉽게 합니다.
     container_name: jobcrawliya_streamlit
+    # Streamlit 앱과 크롤러가 같은 data 폴더를 읽고 쓰게 합니다.
     volumes:
       - ./data:/usr/src/app/data
+    # 호스트의 8501 포트를 Streamlit 기본 포트에 연결합니다.
     ports:
       - "8501:8501"
+    # Python 로그가 Docker 로그에 즉시 찍히도록 합니다.
     environment:
       - PYTHONUNBUFFERED=1
+    # Docker Desktop 재시작 후에도 앱이 다시 떠 있도록 합니다.
     restart: unless-stopped

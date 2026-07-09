@@ -1,14 +1,22 @@
+# Playwright 기반 크롤러 실행에 필요한 브라우저 런타임 포함 이미지입니다.
 FROM mcr.microsoft.com/playwright/python:v1.60.0-noble
 
+# 컨테이너 내부 앱 작업 디렉터리입니다.
 WORKDIR /usr/src/app
 
+# 의존성 파일만 먼저 복사해 Docker 빌드 캐시를 효율적으로 사용합니다.
 COPY requirements.txt ./
+# 크롤러와 Streamlit 앱에 필요한 Python 패키지를 설치합니다.
 RUN pip install --no-cache-dir -r requirements.txt
 
+# 프로젝트 소스 전체를 컨테이너에 복사합니다.
 COPY . .
 
+# Chromium 실행에 필요한 시스템 패키지와 브라우저 설치 상태를 보장합니다.
 RUN playwright install --with-deps || true
 
+# Python 로그가 지연 없이 Docker 로그에 찍히도록 합니다.
 ENV PYTHONUNBUFFERED=1
 
+# 중복 패키지였던 crawling 대신 현재 단일 크롤러 구현인 src.scraper를 실행합니다.
 CMD ["python", "-m", "src.scraper"]

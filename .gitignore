@@ -1,4 +1,4 @@
-# Python
+# Python 실행/캐시 파일
 __pycache__/
 *.py[cod]
 .Python
@@ -13,21 +13,21 @@ coverage.xml
 htmlcov/
 *.egg-info/
 
-# Local secrets/config
+# 로컬 비밀값/환경 설정
 .env
 
-# Generated output and legacy local paths
+# 생성 결과물과 과거 로컬 경로
 data/scraped/
 jobcrawliya/
 
-# Local logs/databases/build output
+# 로컬 로그/DB/빌드 결과물
 *.log
 *.sqlite3
 dist/
 build/
 node_modules/
 
-# Editor/local workspace metadata
+# 에디터와 로컬 작업공간 메타데이터
 .DS_Store
 .idea/
 .vscode/

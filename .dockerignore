@@ -22,11 +22,11 @@ build/
 *.sqlite3
 data/scraped/
 
-# Obsidian vault metadata (local notes view) - ignore completely
+# Obsidian 로컬 작업공간 메타데이터는 Docker 빌드 컨텍스트에서 제외합니다.
 .obsidian/
 .obsidian/*
 
-# Do NOT ignore these (needed for image build)
+# 이미지 빌드에 꼭 필요한 파일들은 제외 규칙보다 우선 포함합니다.
 !Dockerfile
 !docker-compose.yml
 !requirements.txt
