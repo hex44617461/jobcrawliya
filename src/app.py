@@ -1,12 +1,19 @@
+import asyncio
 import os
+import queue
 import re
+import threading
+import time
+
 import streamlit as st
+
+from src.runner import run_scraper_with_cancel
 
 st.set_page_config(page_title="DE 채용공고 로컬 대시보드 🚀", layout="wide")
 st.title("📋 로컬 데이터 엔지니어 채용 공고 모니터링")
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-DIR_BASE = os.path.join(ROOT_DIR, "jobcrawliya", "data", "scraped")
+DIR_BASE = os.path.join(ROOT_DIR, "data", "scraped")
 DIR_POST = os.path.join(DIR_BASE, "posts")
 DIR_IMG = os.path.join(DIR_BASE, "images")
 
@@ -17,7 +24,7 @@ def load_local_jobs():
     if not os.path.exists(DIR_POST):
         return jobs
 
-    for filename in os.listdir(DIR_POST):
+    for filename in sorted(os.listdir(DIR_POST)):
         if filename.endswith(".md"):
             file_path = os.path.join(DIR_POST, filename)
             base_filename = os.path.splitext(filename)[0]
@@ -46,6 +53,96 @@ def load_local_jobs():
     return jobs
 
 
+def _init_session_state():
+    defaults = {
+        "logs": [],
+        "log_queue": queue.Queue(),
+        "running": False,
+        "cancel_event": None,
+        "thread": None,
+    }
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
+
+
+_init_session_state()
+
+
+def drain_log_queue():
+    while True:
+        try:
+            message = st.session_state.log_queue.get_nowait()
+        except queue.Empty:
+            break
+        st.session_state.logs.append(message)
+    st.session_state.logs = st.session_state.logs[-200:]
+
+
+def run_scraper():
+    st.session_state.running = True
+    st.session_state.cancel_event = threading.Event()
+    st.session_state.logs.clear()
+    while not st.session_state.log_queue.empty():
+        try:
+            st.session_state.log_queue.get_nowait()
+        except queue.Empty:
+            break
+
+    def log_fn(message: str):
+        st.session_state.log_queue.put(message)
+
+    log_fn("🚀 수집을 시작합니다...")
+
+    def target():
+        try:
+            asyncio.run(
+                run_scraper_with_cancel(
+                    st.session_state.cancel_event,
+                    log_fn=log_fn,
+                )
+            )
+        except asyncio.CancelledError:
+            log_fn("🛑 수집이 중지되었습니다.")
+        except Exception as e:
+            log_fn(f"❌ 오류 발생: {e}")
+        finally:
+            log_fn("✅ 수집 작업이 종료되었습니다.")
+
+    st.session_state.thread = threading.Thread(target=target, daemon=True)
+    st.session_state.thread.start()
+
+
+def stop_scraper():
+    if st.session_state.cancel_event is not None:
+        st.session_state.cancel_event.set()
+        st.session_state.log_queue.put("⏹ 중지 요청을 보냈습니다...")
+
+
+drain_log_queue()
+
+if st.session_state.running and st.session_state.thread and not st.session_state.thread.is_alive():
+    st.session_state.running = False
+    st.session_state.cancel_event = None
+    st.session_state.thread = None
+    load_local_jobs.clear()
+
+st.sidebar.header("🧰 수집 제어")
+col1, col2 = st.sidebar.columns(2)
+with col1:
+    if st.button("수집 시작", disabled=st.session_state.running):
+        run_scraper()
+        st.rerun()
+with col2:
+    if st.button("중지", disabled=not st.session_state.running):
+        stop_scraper()
+        st.rerun()
+
+if st.session_state.running:
+    st.sidebar.warning("⏳ 수집 진행 중...")
+else:
+    st.sidebar.info("수집 중에는 로그가 실시간으로 표시됩니다.")
+
 jobs_list = load_local_jobs()
 if not jobs_list:
     st.info(f"현재 폴더에 마크다운 파일이 없습니다.\n📂 경로: {DIR_POST}")
@@ -73,3 +170,13 @@ else:
         else:
             st.error("⚠️ 이미지 파일을 찾을 수 없습니다!")
             st.info(f"스트림릿이 찾아간 경로: {img_path}")
+
+st.subheader("📝 수집 로그")
+if st.session_state.logs:
+    st.code("\n".join(st.session_state.logs), language=None)
+else:
+    st.caption("수집을 시작하면 로그가 여기에 표시됩니다.")
+
+if st.session_state.running:
+    time.sleep(2)
+    st.rerun()

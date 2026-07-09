@@ -3,13 +3,13 @@ import os
 import random
 import re
 from pathlib import Path
+from typing import Callable, Optional
 
 from bs4 import BeautifulSoup
 from playwright.async_api import async_playwright
 
-
 ROOT_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = ROOT_DIR / "jobcrawliya" / "data" / "scraped"
+DATA_DIR = ROOT_DIR / "data" / "scraped"
 DIR_POST = DATA_DIR / "posts"
 DIR_IMG = DATA_DIR / "images"
 
@@ -19,28 +19,46 @@ PAGE_NUM_MIN = 1
 PAGE_NUM_MAX = 1
 
 
+def _log(message: str, log_fn: Optional[Callable[[str], None]] = None) -> None:
+    if log_fn:
+        log_fn(message)
+    else:
+        print(message)
+
+
+async def _check_cancel(cancel_event) -> None:
+    if cancel_event is not None and cancel_event.is_set():
+        raise asyncio.CancelledError("사용자 요청으로 중단됨")
+
+
 def ensure_output_dirs() -> None:
     DIR_POST.mkdir(parents=True, exist_ok=True)
     DIR_IMG.mkdir(parents=True, exist_ok=True)
 
 
-async def scrape_jobkorea_full() -> None:
+async def scrape_jobkorea_full(
+    cancel_event=None,
+    log_fn: Optional[Callable[[str], None]] = None,
+) -> None:
     ensure_output_dirs()
 
     visited_links = set()
-    print("🔍 기존 마크다운 파일의 링크를 확인 중...")
-    for filename in os.listdir(DIR_POST):
-        if filename.endswith(".md"):
-            file_path = DIR_POST / filename
-            try:
-                content = file_path.read_text(encoding="utf-8")
-                match = re.search(r'link:\s*"?(https?://[^\s"]+)"?', content)
-                if match:
-                    visited_links.add(match.group(1).strip())
-            except Exception as file_err:
-                print(f"    ⚠️ 파일 읽기 실패 ({filename}): {file_err}")
+    _log("🔍 기존 마크다운 파일의 링크를 확인 중...", log_fn)
+    await _check_cancel(cancel_event)
 
-    print(f"ℹ️ 기존 파일에서 총 {len(visited_links)}개의 링크를 확인했습니다.")
+    if DIR_POST.exists():
+        for filename in os.listdir(DIR_POST):
+            if filename.endswith(".md"):
+                file_path = DIR_POST / filename
+                try:
+                    content = file_path.read_text(encoding="utf-8")
+                    match = re.search(r'link:\s*"?(https?://[^\s"]+)"?', content)
+                    if match:
+                        visited_links.add(match.group(1).strip())
+                except Exception as file_err:
+                    _log(f"    ⚠️ 파일 읽기 실패 ({filename}): {file_err}", log_fn)
+
+    _log(f"ℹ️ 기존 파일에서 총 {len(visited_links)}개의 링크를 확인했습니다.", log_fn)
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
@@ -62,7 +80,11 @@ async def scrape_jobkorea_full() -> None:
                         f"{URL_BASE}/Search/?tabType=recruit&duty={DUTY_CODE}"
                         + (f"&Page_No={page_no}" if page_no > 1 else "")
                     )
-                    print(f"\n=== [{page_no}/{PAGE_NUM_MAX} 페이지] 리스트 접속 시도: {search_url} ===")
+                    await _check_cancel(cancel_event)
+                    _log(
+                        f"\n=== [{page_no}/{PAGE_NUM_MAX} 페이지] 리스트 접속 시도: {search_url} ===",
+                        log_fn,
+                    )
 
                     await search_page.goto(search_url, wait_until="domcontentloaded", timeout=10000)
                     await search_page.wait_for_selector("div.flex.w-full.gap-5.p-7", timeout=5000)
@@ -71,10 +93,11 @@ async def scrape_jobkorea_full() -> None:
                     job_cards = soup.find_all("div", class_="flex w-full gap-5 p-7")
 
                     if not job_cards:
-                        print("수집할 공고 카드가 없습니다. 종료합니다.")
+                        _log("수집할 공고 카드가 없습니다. 종료합니다.", log_fn)
                         break
 
                     for card_element in job_cards:
+                        await _check_cancel(cancel_event)
                         exp_tag = card_element.find("span", class_="flex-shrink-0 text-gray700 text-typo-c1-13")
                         corp_tag = card_element.find("span", class_="truncate text-gray700 text-typo-b2-16")
                         title_tag = card_element.find("span", class_="truncate font-semibold text-typo-b1-18 text-gray900")
@@ -91,14 +114,15 @@ async def scrape_jobkorea_full() -> None:
                         job_link = raw_link if raw_link.startswith("http") else URL_BASE + raw_link
 
                         if job_link.strip() in visited_links:
-                            print(f"  ⏭️ [링크 중복 패스] {corp} - {title}")
+                            _log(f"  ⏭️ [링크 중복 패스] {corp} - {title}", log_fn)
                             continue
 
-                        print(f"  └ [신규 공고 발견] {corp} - {title}")
+                        _log(f"  └ [신규 공고 발견] {corp} - {title}", log_fn)
                         safe_filename = re.sub(r"[^0-9A-Za-z가-힣._-]+", "_", f"{corp}_{title}").strip("._") or "job"
 
                         detail_page = await context.new_page()
                         try:
+                            await _check_cancel(cancel_event)
                             await detail_page.goto(job_link, wait_until="domcontentloaded", timeout=10000)
                             await asyncio.sleep(10)
 
@@ -145,20 +169,21 @@ link: \"{job_link}\"
                             post_path.write_text(markdown_content, encoding="utf-8")
 
                             visited_links.add(job_link.strip())
-                            print(f"    💾 저장 완료: {safe_filename}")
+                            _log(f"    💾 저장 완료: {safe_filename}", log_fn)
                         except Exception as detail_err:
-                            print(f"    ❌ 상세 페이지 처리 중 에러 발생 (스킵): {detail_err}")
+                            _log(f"    ❌ 상세 페이지 처리 중 에러 발생 (스킵): {detail_err}", log_fn)
                         finally:
                             await detail_page.close()
 
                         await asyncio.sleep(random.uniform(10, 15))
+                        await _check_cancel(cancel_event)
                 finally:
                     await search_page.close()
 
                 await asyncio.sleep(random.uniform(5, 12))
         finally:
             await browser.close()
-            print("\n🏁 모든 페이지의 공고 아카이빙 순회가 완료되었습니다!")
+            _log("\n🏁 모든 페이지의 공고 아카이빙 순회가 완료되었습니다!", log_fn)
 
 
 if __name__ == "__main__":
