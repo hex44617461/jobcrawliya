@@ -11,4 +11,4 @@ RUN playwright install --with-deps || true
 
 ENV PYTHONUNBUFFERED=1
 
-CMD ["python", "-m", "crawling"]
+CMD ["python", "-m", "src.scraper"]

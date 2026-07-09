@@ -1,3 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+.Python
+env/
 venv/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+*.egg-info/
+
+# Local secrets/config
 .env
+
+# Generated output and legacy local paths
+data/scraped/
 jobcrawliya/
+
+# Local logs/databases/build output
+*.log
+*.sqlite3
+dist/
+build/
+node_modules/
+
+# Editor/local workspace metadata
+.DS_Store
+.idea/
+.vscode/
+.obsidian/
