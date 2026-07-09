@@ -1,11 +1,27 @@
 services:
-  jobcrawliya:
-    build: .
-    container_name: jobcrawliya_app
+  crawler:
+    build:
+      context: .
+      dockerfile: Dockerfile.crawler
+    container_name: jobcrawliya_crawler
     volumes:
-      - ./:/usr/src/app
-      - ./data/scraped:/usr/src/app/data/scraped
+      - ./jobcrawliya:/usr/src/app/jobcrawliya
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
-    shm_size: '1gb'
+    shm_size: "1gb"
+
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamlit
+    container_name: jobcrawliya_streamlit
+    volumes:
+      - ./jobcrawliya:/usr/src/app/jobcrawliya
+    ports:
+      - "8501:8501"
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    depends_on:
+      - crawler
