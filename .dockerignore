@@ -21,9 +21,13 @@ build/
 *.egg-info/
 *.sqlite3
 
+# Obsidian vault metadata (local notes view) - ignore completely
+.obsidian/
+.obsidian/*
+
 # Do NOT ignore these (needed for image build)
 !Dockerfile
 !docker-compose.yml
 !requirement.txt
 !app.py
-!jobcrawliya/
+jobcrawliya/

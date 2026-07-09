@@ -6,6 +6,7 @@ services:
     container_name: jobcrawliya_app
     volumes:
       - ./:/usr/src/app
+      - ./data/scraped:/usr/src/app/data/scraped
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
