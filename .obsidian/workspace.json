@@ -4,21 +4,17 @@
     "type": "split",
     "children": [
       {
-        "id": "33416004a61b0bcc",
+        "id": "9239d32306631880",
         "type": "tabs",
         "children": [
           {
-            "id": "a5ee299534f2c137",
+            "id": "2a03f1efd3a97a14",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "jobcrawliya/post/화이트스캔__데이터_엔지니어_인프라_구축_및_관리.md",
-                "mode": "source",
-                "source": false
-              },
+              "type": "empty",
+              "state": {},
               "icon": "lucide-file",
-              "title": "화이트스캔__데이터_엔지니어_인프라_구축_및_관리"
+              "title": "새 탭"
             }
           }
         ]
@@ -183,10 +179,10 @@
       "bases:새 베이스 생성하기": false
     }
   },
-  "active": "a5ee299534f2c137",
+  "active": "2a03f1efd3a97a14",
   "lastOpenFiles": [
-    "jobcrawliya/post/주_케이씨엠에스_kcms__서대문_농협손보_EDW_운영_c10.md",
     "jobcrawliya/post/화이트스캔__데이터_엔지니어_인프라_구축_및_관리.md",
+    "jobcrawliya/post/주_케이씨엠에스_kcms__서대문_농협손보_EDW_운영_c10.md",
     "jobcrawliya/img/화이트스캔__데이터_엔지니어_인프라_구축_및_관리.png",
     "jobcrawliya/post/케이앤웍스__경력_RPA_시스템_구축_및_운영_개발자_A.I접목_과제_개발경험자_우대.md",
     "jobcrawliya/img/주_케이씨엠에스_kcms__서대문_농협손보_EDW_운영_c10.png",

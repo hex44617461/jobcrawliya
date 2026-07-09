@@ -1,0 +1,12 @@
+version: "3.8"
+
+services:
+  jobcrawliya:
+    build: .
+    container_name: jobcrawliya_app
+    volumes:
+      - ./:/usr/src/app
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    shm_size: '1gb'

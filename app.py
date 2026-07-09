@@ -178,6 +178,7 @@ link: "{job_link}"
 - **공고 링크**: [바로가기]({job_link})
 
 ## 📄 공고 본문 캡처본
+
 ![공고 스크린샷](../img/{img_name})
 """
                             with open(post_path, "w", encoding="utf-8") as f:
