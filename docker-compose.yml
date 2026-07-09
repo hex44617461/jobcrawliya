@@ -1,5 +1,7 @@
 services:
+  # 자동 크롤링이 필요할 때만: docker compose --profile auto-crawl up --build
   crawler:
+    profiles: ["auto-crawl"]
     build:
       context: .
       dockerfile: Dockerfile.crawler
@@ -23,5 +25,3 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
-    depends_on:
-      - crawler

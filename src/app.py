@@ -84,8 +84,12 @@ def drain_log_queue():
 
 
 def run_scraper():
+    if st.session_state.running:
+        return
+
+    cancel_event = threading.Event()
     st.session_state.running = True
-    st.session_state.cancel_event = threading.Event()
+    st.session_state.cancel_event = cancel_event
     st.session_state.logs.clear()
     while not st.session_state.log_queue.empty():
         try:
@@ -102,7 +106,7 @@ def run_scraper():
         try:
             asyncio.run(
                 run_scraper_with_cancel(
-                    st.session_state.cancel_event,
+                    cancel_event,
                     log_fn=log_fn,
                 )
             )
@@ -111,6 +115,7 @@ def run_scraper():
         except Exception as e:
             log_fn(f"❌ 오류 발생: {e}")
         finally:
+            st.session_state.running = False
             log_fn("✅ 수집 작업이 종료되었습니다.")
 
     st.session_state.thread = threading.Thread(target=target, daemon=True)
@@ -118,14 +123,14 @@ def run_scraper():
 
 
 def stop_scraper():
-    if st.session_state.cancel_event is not None:
+    if st.session_state.cancel_event is not None and not st.session_state.cancel_event.is_set():
         st.session_state.cancel_event.set()
         st.session_state.log_queue.put("⏹ 중지 요청을 보냈습니다...")
 
 
 drain_log_queue()
 
-if st.session_state.running and st.session_state.thread and not st.session_state.thread.is_alive():
+if st.session_state.thread and not st.session_state.thread.is_alive():
     st.session_state.running = False
     st.session_state.cancel_event = None
     st.session_state.thread = None

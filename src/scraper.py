@@ -3,7 +3,7 @@ import os
 import random
 import re
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Awaitable, Callable, Optional, TypeVar
 
 from bs4 import BeautifulSoup
 from playwright.async_api import async_playwright
@@ -18,6 +18,10 @@ DUTY_CODE = "1000236"
 PAGE_NUM_MIN = 1
 PAGE_NUM_MAX = 1
 
+CANCEL_POLL_INTERVAL = 0.4
+
+T = TypeVar("T")
+
 
 def _log(message: str, log_fn: Optional[Callable[[str], None]] = None) -> None:
     if log_fn:
@@ -26,9 +30,48 @@ def _log(message: str, log_fn: Optional[Callable[[str], None]] = None) -> None:
         print(message)
 
 
+def _is_cancelled(cancel_event) -> bool:
+    return cancel_event is not None and cancel_event.is_set()
+
+
 async def _check_cancel(cancel_event) -> None:
-    if cancel_event is not None and cancel_event.is_set():
+    if _is_cancelled(cancel_event):
         raise asyncio.CancelledError("사용자 요청으로 중단됨")
+
+
+async def _interruptible_sleep(seconds: float, cancel_event) -> None:
+    remaining = seconds
+    while remaining > 0:
+        await _check_cancel(cancel_event)
+        step = min(CANCEL_POLL_INTERVAL, remaining)
+        await asyncio.sleep(step)
+        remaining -= step
+
+
+async def _await_with_cancel(awaitable: Awaitable[T], cancel_event) -> T:
+    task = asyncio.create_task(awaitable)
+    try:
+        while not task.done():
+            if _is_cancelled(cancel_event):
+                task.cancel()
+                try:
+                    await task
+                except (asyncio.CancelledError, Exception):
+                    pass
+                raise asyncio.CancelledError("사용자 요청으로 중단됨")
+            try:
+                return await asyncio.wait_for(asyncio.shield(task), timeout=CANCEL_POLL_INTERVAL)
+            except asyncio.TimeoutError:
+                continue
+        return task.result()
+    except asyncio.CancelledError:
+        if not task.done():
+            task.cancel()
+            try:
+                await task
+            except (asyncio.CancelledError, Exception):
+                pass
+        raise
 
 
 def ensure_output_dirs() -> None:
@@ -41,6 +84,7 @@ async def scrape_jobkorea_full(
     log_fn: Optional[Callable[[str], None]] = None,
 ) -> None:
     ensure_output_dirs()
+    cancelled = False
 
     visited_links = set()
     _log("🔍 기존 마크다운 파일의 링크를 확인 중...", log_fn)
@@ -48,6 +92,7 @@ async def scrape_jobkorea_full(
 
     if DIR_POST.exists():
         for filename in os.listdir(DIR_POST):
+            await _check_cancel(cancel_event)
             if filename.endswith(".md"):
                 file_path = DIR_POST / filename
                 try:
@@ -74,20 +119,26 @@ async def scrape_jobkorea_full(
 
         try:
             for page_no in range(PAGE_NUM_MIN, PAGE_NUM_MAX + 1):
+                await _check_cancel(cancel_event)
                 search_page = await context.new_page()
                 try:
                     search_url = (
                         f"{URL_BASE}/Search/?tabType=recruit&duty={DUTY_CODE}"
                         + (f"&Page_No={page_no}" if page_no > 1 else "")
                     )
-                    await _check_cancel(cancel_event)
                     _log(
                         f"\n=== [{page_no}/{PAGE_NUM_MAX} 페이지] 리스트 접속 시도: {search_url} ===",
                         log_fn,
                     )
 
-                    await search_page.goto(search_url, wait_until="domcontentloaded", timeout=10000)
-                    await search_page.wait_for_selector("div.flex.w-full.gap-5.p-7", timeout=5000)
+                    await _await_with_cancel(
+                        search_page.goto(search_url, wait_until="domcontentloaded", timeout=10000),
+                        cancel_event,
+                    )
+                    await _await_with_cancel(
+                        search_page.wait_for_selector("div.flex.w-full.gap-5.p-7", timeout=5000),
+                        cancel_event,
+                    )
 
                     soup = BeautifulSoup(await search_page.content(), "html.parser")
                     job_cards = soup.find_all("div", class_="flex w-full gap-5 p-7")
@@ -122,14 +173,17 @@ async def scrape_jobkorea_full(
 
                         detail_page = await context.new_page()
                         try:
-                            await _check_cancel(cancel_event)
-                            await detail_page.goto(job_link, wait_until="domcontentloaded", timeout=10000)
-                            await asyncio.sleep(10)
+                            await _await_with_cancel(
+                                detail_page.goto(job_link, wait_until="domcontentloaded", timeout=10000),
+                                cancel_event,
+                            )
+                            await _interruptible_sleep(10, cancel_event)
 
                             img_name = f"{safe_filename}.png"
                             img_path = DIR_IMG / img_name
 
                             content_element = await detail_page.query_selector("div.\\[grid-area\\:content\\]")
+                            await _check_cancel(cancel_event)
                             if content_element:
                                 await detail_page.evaluate("""
                                     const el = document.querySelector('div.\\[grid-area\\:content\\]');
@@ -170,20 +224,31 @@ link: \"{job_link}\"
 
                             visited_links.add(job_link.strip())
                             _log(f"    💾 저장 완료: {safe_filename}", log_fn)
+                        except asyncio.CancelledError:
+                            cancelled = True
+                            raise
                         except Exception as detail_err:
                             _log(f"    ❌ 상세 페이지 처리 중 에러 발생 (스킵): {detail_err}", log_fn)
                         finally:
                             await detail_page.close()
 
-                        await asyncio.sleep(random.uniform(10, 15))
-                        await _check_cancel(cancel_event)
+                        await _interruptible_sleep(random.uniform(10, 15), cancel_event)
+                except asyncio.CancelledError:
+                    cancelled = True
+                    raise
                 finally:
                     await search_page.close()
 
-                await asyncio.sleep(random.uniform(5, 12))
+                await _interruptible_sleep(random.uniform(5, 12), cancel_event)
+        except asyncio.CancelledError:
+            cancelled = True
+            raise
         finally:
             await browser.close()
-            _log("\n🏁 모든 페이지의 공고 아카이빙 순회가 완료되었습니다!", log_fn)
+            if cancelled:
+                _log("\n🛑 사용자 요청으로 수집을 중단했습니다.", log_fn)
+            else:
+                _log("\n🏁 모든 페이지의 공고 아카이빙 순회가 완료되었습니다!", log_fn)
 
 
 if __name__ == "__main__":
