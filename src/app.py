@@ -2,17 +2,21 @@ import asyncio
 import os
 import queue
 import re
+import sys
 import threading
 import time
 
 import streamlit as st
+
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
 
 from src.runner import run_scraper_with_cancel
 
 st.set_page_config(page_title="DE 채용공고 로컬 대시보드 🚀", layout="wide")
 st.title("📋 로컬 데이터 엔지니어 채용 공고 모니터링")
 
-ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DIR_BASE = os.path.join(ROOT_DIR, "data", "scraped")
 DIR_POST = os.path.join(DIR_BASE, "posts")
 DIR_IMG = os.path.join(DIR_BASE, "images")
