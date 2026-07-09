@@ -88,17 +88,18 @@ def run_scraper():
         return
 
     cancel_event = threading.Event()
+    log_queue = st.session_state.log_queue
     st.session_state.running = True
     st.session_state.cancel_event = cancel_event
     st.session_state.logs.clear()
-    while not st.session_state.log_queue.empty():
+    while not log_queue.empty():
         try:
-            st.session_state.log_queue.get_nowait()
+            log_queue.get_nowait()
         except queue.Empty:
             break
 
     def log_fn(message: str):
-        st.session_state.log_queue.put(message)
+        log_queue.put(message)
 
     log_fn("🚀 수집을 시작합니다...")
 
@@ -115,7 +116,6 @@ def run_scraper():
         except Exception as e:
             log_fn(f"❌ 오류 발생: {e}")
         finally:
-            st.session_state.running = False
             log_fn("✅ 수집 작업이 종료되었습니다.")
 
     st.session_state.thread = threading.Thread(target=target, daemon=True)

@@ -185,18 +185,18 @@ async def scrape_jobkorea_full(
                             content_element = await detail_page.query_selector("div.\\[grid-area\\:content\\]")
                             await _check_cancel(cancel_event)
                             if content_element:
-                                await detail_page.evaluate("""
-                                    const el = document.querySelector('div.\\[grid-area\\:content\\]');
-                                    if (el) {
+                                await content_element.evaluate("""
+                                    el => {
                                         el.style.width = '100%';
                                         el.style.maxWidth = '100%';
                                         el.style.marginLeft = '0';
                                         el.style.marginRight = '0';
                                         el.style.padding = '20px';
                                     }
-                                    const aside = document.querySelector('aside, .\\[grid-area\\:aside\\]');
-                                    if (aside) aside.style.display = 'none';
                                 """)
+                                aside_element = await detail_page.query_selector("aside, div.\\[grid-area\\:aside\\]")
+                                if aside_element:
+                                    await aside_element.evaluate("el => { el.style.display = 'none'; }")
                                 await detail_page.set_viewport_size({"width": 1000, "height": 1024})
                                 await content_element.screenshot(path=str(img_path))
                                 await detail_page.set_viewport_size({"width": 1440, "height": 1024})
