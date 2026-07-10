@@ -21,7 +21,7 @@ DIR_IMG = DATA_DIR / "images"
 URL_BASE = "https://www.jobkorea.co.kr"
 DUTY_CODE = "1000236"
 PAGE_NUM_MIN = 1
-PAGE_NUM_MAX = 1
+PAGE_NUM_MAX = 30
 
 # 중지 버튼을 눌렀을 때 긴 대기 중에도 빠르게 반응하도록 취소 확인 주기를 둡니다.
 CANCEL_POLL_INTERVAL = 0.4
