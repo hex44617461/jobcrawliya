@@ -31,6 +31,12 @@ DIR_IMG = os.path.join(DIR_BASE, "images")
 def load_local_jobs():
     """저장된 마크다운 공고를 읽어 화면에 표시할 목록으로 변환합니다."""
 
+    def field(content: str, name: str) -> str:
+        """마크다운 YAML 영역에서 지정한 필드 값을 읽습니다."""
+
+        match = re.search(rf'{name}:\s*"([^"]*)"', content)
+        return match.group(1).strip() if match else ""
+
     jobs = []
     if not os.path.exists(DIR_POST):
         return jobs
@@ -44,15 +50,12 @@ def load_local_jobs():
                 # 크롤러가 생성한 YAML/본문 일부를 정규식으로 읽어 카드 정보를 구성합니다.
                 with open(file_path, "r", encoding="utf-8") as post_file:
                     content = post_file.read()
-                title_match = re.search(r'title:\s*"([^"]+)"', content)
-                company_match = re.search(r'company:\s*"([^"]+)"', content)
-                link_match = re.search(r'link:\s*"([^"]+)"', content)
                 exp_match = re.search(r'-\s*\*\*경력 요건\*\*:\s*([^\n]+)', content)
 
-                title = title_match.group(1) if title_match else "제목 없음"
-                company = company_match.group(1) if company_match else "회사명 없음"
-                link = link_match.group(1) if link_match else ""
-                exp = exp_match.group(1).strip() if exp_match else "경력 정보 없음"
+                title = field(content, "title") or "제목 없음"
+                company = field(content, "company") or "회사명 없음"
+                link = field(content, "link")
+                exp = field(content, "experience") or (exp_match.group(1).strip() if exp_match else "경력 정보 없음")
                 expected_png_path = os.path.join(DIR_IMG, f"{base_filename}.png")
 
                 jobs.append({
@@ -60,6 +63,15 @@ def load_local_jobs():
                     "company": company,
                     "link": link,
                     "experience": exp,
+                    "education": field(content, "education") or "학력 정보 없음",
+                    "skills": field(content, "skills") or "스킬 정보 없음",
+                    "employment": field(content, "employment") or "근무 형태 정보 없음",
+                    "work_time": field(content, "work_time") or "근무 시간 정보 없음",
+                    "work_address": field(content, "work_address") or "근무 주소 정보 없음",
+                    "industry": field(content, "industry") or "산업 업종 정보 없음",
+                    "company_type": field(content, "company_type") or "기업 구분 정보 없음",
+                    "company_size": field(content, "company_size") or "기업 인원 정보 없음",
+                    "company_location": field(content, "company_location") or "기업 위치 정보 없음",
                     "img_path": expected_png_path,
                 })
             except Exception:
@@ -198,7 +210,16 @@ else:
     with col_detail:
         st.subheader("🔍 공고 상세 정보")
         st.write(f"🏢 **회사명:** {selected_job['company']}")
-        st.write(f"🎓 **경력 조건:** {selected_job['experience']}")
+        st.write(f"💼 **필요 경력:** {selected_job['experience']}")
+        st.write(f"🎓 **필요 학력:** {selected_job['education']}")
+        st.write(f"🧩 **필요 스킬:** {selected_job['skills']}")
+        st.write(f"📌 **근무 형태:** {selected_job['employment']}")
+        st.write(f"🕘 **근무 시간:** {selected_job['work_time']}")
+        st.write(f"📍 **근무 주소:** {selected_job['work_address']}")
+        st.write(f"🏷️ **산업 업종:** {selected_job['industry']}")
+        st.write(f"🏢 **기업 구분:** {selected_job['company_type']}")
+        st.write(f"👥 **기업 인원:** {selected_job['company_size']}")
+        st.write(f"🗺️ **기업 위치:** {selected_job['company_location']}")
         if selected_job['link']:
             st.write(f"🔗 **원본 링크:** [{selected_job['link']}]({selected_job['link']})")
 

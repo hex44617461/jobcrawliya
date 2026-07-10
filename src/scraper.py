@@ -1,6 +1,7 @@
 """잡코리아 채용 공고를 수집해 마크다운과 캡처 이미지로 저장하는 크롤러입니다."""
 
 import asyncio
+import json
 import os
 import random
 import re
@@ -99,6 +100,167 @@ def ensure_output_dirs() -> None:
     DIR_IMG.mkdir(parents=True, exist_ok=True)
 
 
+def _clean_text(value: str) -> str:
+    """HTML에서 가져온 텍스트의 공백과 불필요한 버튼 문구를 정리합니다."""
+
+    value = re.sub(r"\s+", " ", value or "").strip()
+    value = value.replace("지도보기", "").strip()
+    return value
+
+
+def _yaml_string(value: str) -> str:
+    """마크다운 YAML 값으로 안전하게 넣기 위해 JSON 문자열 형태로 감쌉니다."""
+
+    return json.dumps(value or "", ensure_ascii=False)
+
+
+def _first_text(soup: BeautifulSoup, selector: str) -> str:
+    """CSS selector에 맞는 첫 요소의 텍스트를 반환합니다."""
+
+    element = soup.select_one(selector)
+    return _clean_text(element.get_text(" ", strip=True)) if element else ""
+
+
+def _meta_content(soup: BeautifulSoup, name: str = "", prop: str = "") -> str:
+    """meta name 또는 property 값에 해당하는 content를 가져옵니다."""
+
+    selector = f'meta[name="{name}"]' if name else f'meta[property="{prop}"]'
+    element = soup.select_one(selector)
+    return _clean_text(element.get("content", "")) if element else ""
+
+
+def _parse_json_ld(soup: BeautifulSoup) -> dict:
+    """상세 페이지의 구조화 데이터(JSON-LD)를 dict로 읽습니다."""
+
+    script = soup.select_one('script[type="application/ld+json"]')
+    if not script or not script.string:
+        return {}
+    try:
+        data = json.loads(script.string)
+    except json.JSONDecodeError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _extract_item_value(soup: BeautifulSoup, component: str, label: str) -> str:
+    """잡코리아 상세 페이지의 라벨/값 쌍 컴포넌트에서 값을 추출합니다."""
+
+    for item in soup.select(f'[data-sentry-component="{component}"]'):
+        label_element = item.select_one("span.min-w-\\[80px\\]")
+        if not label_element or _clean_text(label_element.get_text(" ", strip=True)) != label:
+            continue
+
+        label_element.extract()
+        return _clean_text(item.get_text(" ", strip=True))
+    return ""
+
+
+def _extract_company_box_value(soup: BeautifulSoup, label: str) -> str:
+    """기업 정보 카드에서 사원수/기업구분/산업/위치 값을 추출합니다."""
+
+    for box in soup.select('[data-sentry-component="CorpInformationBox"]'):
+        texts = [_clean_text(text) for text in box.stripped_strings]
+        texts = [text for text in texts if text and text != "지도보기"]
+        for index, text in enumerate(texts):
+            if text == label and index + 1 < len(texts):
+                return texts[index + 1]
+    return ""
+
+
+def _extract_skills_from_next_data(html: str) -> str:
+    """Next.js 데이터에 들어있는 스킬명을 찾아 쉼표로 연결합니다."""
+
+    names = []
+    for name in re.findall(r'\\"name\\":\\"([^"\\]+)\\"', html):
+        if name and name not in names:
+            names.append(name)
+
+    # 직무 키워드가 먼저 나오고 실제 스킬은 skillTypeCode와 함께 나오므로, 스킬다운 값만 우선 남깁니다.
+    skill_names = []
+    for match in re.finditer(r'\{\\"name\\":\\"([^"\\]+)\\"[^{}]*?\\"skillTypeCode\\":\\"HARD_SKILL\\"', html):
+        name = match.group(1)
+        if name and name not in skill_names:
+            skill_names.append(name)
+
+    return ", ".join(skill_names or names)
+
+
+def _normalize_experience(value: str) -> str:
+    """상세 페이지의 경력 텍스트를 사용자가 보기 좋은 형태로 정리합니다."""
+
+    value = _clean_text(value)
+    match = re.search(r"\(([^)]+)\)", value)
+    if match:
+        return match.group(1)
+    return re.sub(r"^경력\s*", "", value).strip() or value
+
+
+def _extract_time_range(value: str) -> str:
+    """근무시간 텍스트에서 시간대가 있으면 시간대만 우선 추출합니다."""
+
+    match = re.search(r"\d{1,2}:\d{2}\s*~\s*\d{1,2}:\d{2}", value or "")
+    return match.group(0) if match else _clean_text(value)
+
+
+def parse_detail_metadata(html: str, fallback: dict) -> dict:
+    """상세 페이지 본문에서 저장용 메타데이터를 추출하고 카드값으로 보완합니다."""
+
+    soup = BeautifulSoup(html, "html.parser")
+    json_ld = _parse_json_ld(soup)
+    meta_description = _meta_content(soup, name="description")
+
+    company = (
+        _first_text(soup, '[data-sentry-component="CompanyName"] h2')
+        or json_ld.get("hiringOrganization", {}).get("name", "")
+        or _meta_content(soup, name="writer")
+        or fallback.get("company", "")
+        or "회사명 없음"
+    )
+    title = (
+        _first_text(soup, '[data-sentry-component="TitleContent"] h1')
+        or json_ld.get("title", "")
+        or fallback.get("title", "")
+        or "제목 없음"
+    )
+
+    exp = _normalize_experience(_extract_item_value(soup, "QualificationItem", "경력"))
+    if not exp:
+        match = re.search(r"경력\s*:\s*([^,]+)", meta_description)
+        exp = _clean_text(match.group(1)) if match else fallback.get("experience", "")
+
+    education = _extract_item_value(soup, "QualificationItem", "학력")
+    if not education:
+        education = json_ld.get("educationRequirements", "")
+    if not education:
+        match = re.search(r"학력\s*:\s*([^,]+)", meta_description)
+        education = _clean_text(match.group(1)) if match else ""
+
+    skills = _extract_item_value(soup, "QualificationItem", "스킬")
+    if not skills or skills.startswith(","):
+        skills = _extract_skills_from_next_data(html) or skills.lstrip(", ")
+
+    employment = _extract_item_value(soup, "RecruitmentItem", "고용형태")
+    work_time = _extract_time_range(_extract_item_value(soup, "RecruitmentItem", "근무시간"))
+    work_address = _extract_item_value(soup, "RecruitmentItem", "근무지주소")
+    if not work_address:
+        work_address = json_ld.get("jobLocation", {}).get("address", {}).get("streetAddress", "")
+
+    return {
+        "title": title,
+        "company": company,
+        "experience": exp or "경력 정보 없음",
+        "education": education or "학력 정보 없음",
+        "skills": skills or "스킬 정보 없음",
+        "employment": employment or "근무 형태 정보 없음",
+        "work_time": work_time or "근무 시간 정보 없음",
+        "work_address": work_address or "근무 주소 정보 없음",
+        "industry": _extract_company_box_value(soup, "산업(업종)") or "산업 업종 정보 없음",
+        "company_type": _extract_company_box_value(soup, "기업구분") or "기업 구분 정보 없음",
+        "company_size": _extract_company_box_value(soup, "사원수") or "기업 인원 정보 없음",
+        "company_location": _extract_company_box_value(soup, "위치") or "기업 위치 정보 없음",
+    }
+
+
 async def scrape_jobkorea_full(
     cancel_event=None,
     log_fn: Optional[Callable[[str], None]] = None,
@@ -144,7 +306,7 @@ async def scrape_jobkorea_full(
         )
 
         try:
-            # 현재는 테스트와 로컬 실행 부담을 줄이기 위해 1페이지만 순회합니다.
+            # 페이지를 순회합니다.
             for page_no in range(PAGE_NUM_MIN, PAGE_NUM_MAX + 1):
                 await _check_cancel(cancel_event)
                 search_page = await context.new_page()
@@ -178,15 +340,17 @@ async def scrape_jobkorea_full(
 
                     for card_element in job_cards:
                         await _check_cancel(cancel_event)
-                        # 카드 내부의 회사명, 제목, 경력, 상세 링크를 추출합니다.
+                        # 카드는 상세 링크 확보와 진행 로그/fallback 용도로만 가볍게 파싱합니다.
                         exp_tag = card_element.find("span", class_="flex-shrink-0 text-gray700 text-typo-c1-13")
                         corp_tag = card_element.find("span", class_="truncate text-gray700 text-typo-b2-16")
                         title_tag = card_element.find("span", class_="truncate font-semibold text-typo-b1-18 text-gray900")
                         link_tag = card_element.find("a", href=True)
 
-                        exp = exp_tag.get_text(strip=True) if exp_tag else "경력 무관"
-                        corp = corp_tag.get_text(strip=True) if corp_tag else "회사명 없음"
-                        title = title_tag.get_text(strip=True) if title_tag else "제목 없음"
+                        card_meta = {
+                            "experience": exp_tag.get_text(strip=True) if exp_tag else "경력 정보 없음",
+                            "company": corp_tag.get_text(strip=True) if corp_tag else "회사명 없음",
+                            "title": title_tag.get_text(strip=True) if title_tag else "제목 없음",
+                        }
 
                         if not link_tag:
                             continue
@@ -196,12 +360,10 @@ async def scrape_jobkorea_full(
                         job_link = raw_link if raw_link.startswith("http") else URL_BASE + raw_link
 
                         if job_link.strip() in visited_links:
-                            _log(f"  ⏭️ [링크 중복 패스] {corp} - {title}", log_fn)
+                            _log(f"  ⏭️ [링크 중복 패스] {card_meta['company']} - {card_meta['title']}", log_fn)
                             continue
 
-                        _log(f"  └ [신규 공고 발견] {corp} - {title}", log_fn)
-                        # 파일명에 쓸 수 없는 문자는 밑줄로 바꿔 저장 실패를 막습니다.
-                        safe_filename = re.sub(r"[^0-9A-Za-z가-힣._-]+", "_", f"{corp}_{title}").strip("._") or "job"
+                        _log(f"  └ [신규 공고 발견] {card_meta['company']} - {card_meta['title']}", log_fn)
 
                         detail_page = await context.new_page()
                         try:
@@ -212,6 +374,14 @@ async def scrape_jobkorea_full(
                             )
                             await _interruptible_sleep(10, cancel_event)
 
+                            # 상세 페이지 본문/구조화 데이터에서 실제 저장할 메타데이터를 우선 파싱합니다.
+                            detail_html = await detail_page.content()
+                            detail_meta = parse_detail_metadata(detail_html, card_meta)
+                            title = detail_meta["title"]
+                            corp = detail_meta["company"]
+
+                            # 파일명에 쓸 수 없는 문자는 밑줄로 바꿔 저장 실패를 막습니다.
+                            safe_filename = re.sub(r"[^0-9A-Za-z가-힣._-]+", "_", f"{corp}_{title}").strip("._") or "job"
                             img_name = f"{safe_filename}.png"
                             img_path = DIR_IMG / img_name
 
@@ -244,15 +414,34 @@ async def scrape_jobkorea_full(
                             # 화면 앱이 읽을 수 있도록 공고 메타데이터를 마크다운으로 저장합니다.
                             post_path = DIR_POST / f"{safe_filename}.md"
                             markdown_content = f"""---
-title: \"{title}\"
-company: \"{corp}\"
-link: \"{job_link}\"
+link: {_yaml_string(job_link)}
+title: {_yaml_string(title)}
+company: {_yaml_string(corp)}
+experience: {_yaml_string(detail_meta["experience"])}
+education: {_yaml_string(detail_meta["education"])}
+skills: {_yaml_string(detail_meta["skills"])}
+employment: {_yaml_string(detail_meta["employment"])}
+work_time: {_yaml_string(detail_meta["work_time"])}
+work_address: {_yaml_string(detail_meta["work_address"])}
+industry: {_yaml_string(detail_meta["industry"])}
+company_type: {_yaml_string(detail_meta["company_type"])}
+company_size: {_yaml_string(detail_meta["company_size"])}
+company_location: {_yaml_string(detail_meta["company_location"])}
 ---
 
 # {title}
 
 - **회사명**: {corp}
-- **경력 요건**: {exp}
+- **필요 경력**: {detail_meta["experience"]}
+- **필요 학력**: {detail_meta["education"]}
+- **필요 스킬**: {detail_meta["skills"]}
+- **근무 형태**: {detail_meta["employment"]}
+- **근무 시간**: {detail_meta["work_time"]}
+- **근무 주소**: {detail_meta["work_address"]}
+- **산업 업종**: {detail_meta["industry"]}
+- **기업 구분**: {detail_meta["company_type"]}
+- **기업 인원**: {detail_meta["company_size"]}
+- **기업 위치**: {detail_meta["company_location"]}
 - **공고 링크**: [바로가기]({job_link})
 
 ## 📄 공고 본문 캡처본
